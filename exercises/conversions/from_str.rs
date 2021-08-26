@@ -4,6 +4,7 @@
 // You can read more about it at https://doc.rust-lang.org/std/str/trait.FromStr.html
 use std::error;
 use std::str::FromStr;
+use std::fmt;
 
 #[derive(Debug)]
 struct Person {
@@ -11,7 +12,18 @@ struct Person {
     age: usize,
 }
 
-// I AM NOT DONE
+#[derive(Debug)]
+enum MyError {
+    Error
+}
+
+impl std::error::Error for MyError {}
+
+impl std::fmt::Display for MyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "error")
+    }
+}
 
 // Steps:
 // 1. If the length of the provided string is 0, an error should be returned
@@ -26,8 +38,28 @@ struct Person {
 impl FromStr for Person {
     type Err = Box<dyn error::Error>;
     fn from_str(s: &str) -> Result<Person, Self::Err> {
+        let split: Vec<&str> = s.split(",").collect();
+        if split.len() != 2 {
+            return Err(Box::new(MyError::Error));
+        }
+
+        let name = split[0].to_string();
+        if name == "" {
+            return Err(Box::new(MyError::Error));
+        }
+
+        let age_result = split[1].parse::<usize>();
+
+        match age_result {
+            Err(_) => Err(Box::new(MyError::Error)),
+            Ok(age) => Ok(Person {
+                name,
+                age,
+            })
+        }
     }
 }
+
 
 fn main() {
     let p = "Mark,20".parse::<Person>().unwrap();
@@ -42,6 +74,7 @@ mod tests {
     fn empty_input() {
         assert!("".parse::<Person>().is_err());
     }
+
     #[test]
     fn good_input() {
         let p = "John,32".parse::<Person>();
@@ -50,6 +83,7 @@ mod tests {
         assert_eq!(p.name, "John");
         assert_eq!(p.age, 32);
     }
+
     #[test]
     fn missing_age() {
         assert!("John,".parse::<Person>().is_err());
